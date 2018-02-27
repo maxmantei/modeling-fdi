@@ -1,0 +1,27 @@
+fdi\_minimum\_data
+================
+
+This is a minimum panel data set for bilateral FDI flows. It contains four variables:
+
+-   **host**: *the World Bank code of the country hosting the investment*
+-   **source**: *the World Bank code of the country of origin*
+-   **year**: *the years in which the the net FDI flows are recorded*
+-   **FDI\_AM**: *net FDI flows in million USD, with NA as missing values*
+
+The `csv` file can be used to browse the raw data. The data originates (with slight modifications) from:
+
+    @Article{ABN2018,
+    author="Aisbett, Emma and Busse, Matthias and Nunnenkamp, Peter",
+    title="Bilateral investment treaties as deterrents of host-country discretion: the impact of investor-state disputes on foreign direct investment in developing countries",
+    journal="Review of World Economics",
+    year="2018",
+    month="Feb",
+    day="01",
+    volume="154",
+    number="1",
+    pages="119--155",
+    abstract="The recent boom of investor-state disputes filed under international investment agreements has fueled a controversial academic and policy debate. We study the impact of these compensation claims on foreign direct investment (FDI) flows to the responding host country. Our econometric analysis focuses on differences in the FDI response from BIT-partner and non-partner countries of developing host countries. This approach allows us not only to distinguish competing hypotheses about BIT function, but also to address endogeneity concerns in earlier studies. We find that BITs stimulate bilateral FDI flows from partner countries---but only so long as the developing host country has not had a claim brought against it to arbitration. Our results provide an additional explanation for the policy-changes observed in many states subsequent to their first experience of an investor-state dispute.",
+    issn="1610-2886",
+    doi="10.1007/s10290-017-0285-1",
+    url="https://doi.org/10.1007/s10290-017-0285-1"
+    }
