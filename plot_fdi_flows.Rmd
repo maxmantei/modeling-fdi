@@ -1,0 +1,229 @@
+---
+title: "Plotting FDI flows"
+output: github_document
+always_allow_html: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+First, load the require packages.
+
+```{r load-pkgs}
+library(tidyverse)
+theme_set(theme_minimal())
+```
+
+Then, load the data set. Note that there is a brief description in the data folder.
+
+```{r load-data}
+fdi_data <- readRDS("data/fdi_minimum_data.rds")
+glimpse(fdi_data)
+```
+
+```{r simple-summary}
+summary(fdi_data$FDI_AM)
+
+fdi_data <- fdi_data %>% 
+  mutate(n_total = n(),
+         flow_category = case_when(FDI_AM < 0  ~ "negative",
+                                   FDI_AM > 0  ~ "positive",
+                                   FDI_AM == 0 ~ "zero",
+                                   TRUE        ~ "missing"))
+
+fdi_data %>% 
+  group_by(flow_category) %>%
+  summarize(count = n(), proportion = count/unique(n_total))
+```
+
+# Pooled data
+
+## Raw FDI flows
+
+In this plot all 63,911 missing values are ignored.
+
+```{r fdi-raw-hist}
+ggplot(fdi_data, aes(x = FDI_AM)) +
+  geom_histogram()
+```
+
+## Logged FDI flows
+
+Here, missing values and zero flows are ignored. We use two transformations. Positive flows are simply transformed by taking the natural logarithm. Negative flows are transformed as $-\ln(-\text{FDI_AM})$. Using these transformations it is necessary to model positive and negative flows separately to get reasonable estimates. Although this should be obvious, the next plot makes this clear even more: Due to the different transformations it is not clear, if the original FDI flow was positive or negative, since flows that are within the interval $(-1,1)$ on the original scale are transformed ambiguously. Another feature that becomes visible in the plot is multimodality. Especially at 0, to which both all flows with absolute value of 1 are mapped to. This is a first hint of measurement error. FDI flows that are exactly equal to 1 or -1 are reported more often than value in the neighborhood of these value. This is most likely due to rounding in the officially reported numbers. The pattern becomes even more apparent in later visualizations.
+
+```{r fdi-log-mil-hist}
+fdi_data <- fdi_data %>% 
+  mutate(fdi_ln_mil = if_else(FDI_AM < 0, -log(-FDI_AM), log(FDI_AM)))
+
+ggplot(fdi_data, aes(x = fdi_ln_mil, fill = flow_category)) +
+  geom_histogram(bins = 150)
+```
+
+The multimodality issue becomes even more obvious when we employ the same transformation as before to FDI flows measured in USD (and *not* millions of USD). The overlap of the distributions is gone since none of the reported FDI flows are less than a Dollar in magnitude. More specifically, absolute flows below USD 22,000 ($\ln(22000) \approx 10$) are almost never reported, which seems plausible. This gap however suggests, that negative and positive FDI flows should be either modeled separately or with some form of mixture model to take care of the multimodality. The measurement error problem even becomes more visible. The vertical dotted lines indicate flows of magnitude 1, 2, and 3 million USD. Both negative and positive reported flows gravitate towards these values. This is problematic, because if the problem is not addressed, the variability of low magnitude FDI flows will be underestimated.
+
+```{r fdi-log-hist}
+fdi_data <- fdi_data %>% 
+  mutate(fdi_ln = if_else(FDI_AM < 0, -log(-FDI_AM*1e6), log(FDI_AM*1e6)))
+
+vlines <- log((1:3)*1e6) * c(-1, -1, -1, 1, 1, 1)
+
+ggplot(fdi_data, aes(x = fdi_ln, fill = flow_category)) +
+  geom_histogram(bins = 150) + 
+  geom_vline(xintercept = vlines, linetype = "dotted")
+```
+
+## Measurement error
+
+Focusing only on the magnitude of flows (in million USD here) after the log transformation described above and plotting more bins in of the histogram, reveals the most problematic values. Vertical dotted lines are draw at the transformed values of exactly 1, 2, 3, 4, 5, 10, and 20 million USD flows. These seem the values that disproportionately many reported numbers converge to.
+
+```{r}
+fdi_data %>%
+  mutate(fdi_ln_mil = if_else(flow_category == "negative", -fdi_ln_mil, fdi_ln_mil)) %>%
+  ggplot(aes(x = fdi_ln_mil)) +
+    geom_histogram(bins = 400) + 
+  geom_vline(xintercept = log(c(1:5, 10, 20)), linetype = "dotted")
+```
+
+In the following plot, the x-axis of the previous plot is cut in 50 equally spaced intervals and for each interval the standard deviation of the log of millions of absolute FDI flows is presented. The size of the dots represents the number of observations in that interval---intervals with fewer observations should show more variability in the the estimated standard deviation, which is the case. Larger dots should gravitate closer to a common standard deviation. This is also true, except for the intervals obtaining problematic values, which show much lower *"local"* standard deviations.
+
+```{r}
+fdi_data %>%
+    mutate(fdi_ln_mil = if_else(flow_category == "negative", -fdi_ln_mil, fdi_ln_mil)) %>% filter(fdi_ln_mil > -5) %>%
+    mutate(cuts = cut_interval(fdi_ln_mil, 50)) %>% group_by(cuts) %>% summarize(local_sd = sd(fdi_ln_mil), n_obs = n()) %>% ggplot(aes(y = cuts, x = local_sd, size = n_obs)) + geom_point()
+```
+
+If the number of cuts is increased so that arbitrariness of individual cuts does not matter as much, the pattern becomes even more pronounced.
+
+```{r}
+fdi_data %>%
+  mutate(fdi_ln_mil = if_else(flow_category == "negative", -fdi_ln_mil, fdi_ln_mil)) %>% 
+  filter(fdi_ln_mil > -5) %>%
+  mutate(cuts = cut_interval(fdi_ln_mil, 1000)) %>%
+  group_by(cuts) %>% summarize(local_sd = sd(fdi_ln_mil), n_obs = n()) %>% 
+  ungroup() %>% mutate(rank_cut = 1:length(cuts)) %>%
+  ggplot(aes(y = rank_cut, x = local_sd, size = n_obs)) + geom_point()
+```
+
+```{r local_sds}
+full <- fdi_data %>%
+  filter(!is.na(fdi_ln_mil) & fdi_ln_mil != -Inf) %>%
+  mutate(fdi_ln_mil = if_else(flow_category == "negative", -fdi_ln_mil, fdi_ln_mil),
+         fdi_ln_mil_c = as.numeric(scale(fdi_ln_mil)),
+         min_val = min(fdi_ln_mil_c), 
+         max_val = max(fdi_ln_mil_c),
+         cuts = cut(fdi_ln_mil_c, 
+                    breaks = seq(unique(min_val), unique(max_val), length.out = 1500), 
+                    include.lowest = TRUE)) %>%
+    group_by(cuts) %>% 
+    summarize(local_sd = sd(fdi_ln_mil_c), n_obs = n()) %>% 
+    ungroup() %>% mutate(rank_cut = 1:length(cuts)) %>%
+    mutate(selected = "full")
+
+selected <- fdi_data %>%
+  filter(!is.na(fdi_ln_mil) & fdi_ln_mil != -Inf) %>%
+  mutate(fdi_ln_mil = if_else(flow_category == "negative", -fdi_ln_mil, fdi_ln_mil),
+         fdi_ln_mil_c = as.numeric(scale(fdi_ln_mil)),
+         min_val = min(fdi_ln_mil_c), 
+         max_val = max(fdi_ln_mil_c),
+         cuts = cut(fdi_ln_mil_c, 
+                    breaks = seq(unique(min_val), unique(max_val), length.out = 1500), 
+                    include.lowest = TRUE)) %>%
+    filter(!(abs(FDI_AM) %in% c(1:20))) %>%
+    group_by(cuts) %>% 
+    summarize(local_sd = sd(fdi_ln_mil_c), n_obs = n()) %>% 
+    ungroup() %>% mutate(rank_cut = 1:length(cuts)) %>%
+    mutate(selected = "selected")
+
+bind_rows(full, selected) %>% 
+ ggplot(aes(y = rank_cut, x = local_sd, color = selected, size = n_obs)) + geom_point()
+```
+
+
+For comparison, I did the same thin with 30,000 values from a standard normal distribution. *(Note that the size of the dots is not directly comparable with the previous plot, since the point here are much more evenly spread across the intervals!)*
+
+```{r}
+tibble(x = rnorm(30000), cuts = cut_interval(x, 1000)) %>%
+  group_by(cuts) %>% 
+  summarize(local_sd = sd(x), n_obs = n()) %>%
+  ungroup() %>% mutate(rank_cut = 1:length(cuts)) %>%
+  ggplot(aes(x = local_sd, y = rank_cut, size = n_obs)) + geom_point()
+```
+
+## The inverse hyperbolic sine (IHS) transformation of FDI flows
+
+The advantage of the IHS transformation is, that unlike the log transformation it is applicable to zero and negative values. The IHS transformation of bilateral FDI flows in million USD is shown below. Again, clustering around low integer values due to rounding of the reported data is visible. More importantly, the multimodality of the data becomes apparent as well.
+
+```{r}
+fdi_data <- fdi_data %>%
+  mutate(fdi_ihs_mil = asinh(FDI_AM))
+
+ggplot(fdi_data, aes(x = fdi_ihs_mil)) +
+  geom_histogram(bins = 100)
+```
+
+Employing the IHS transformation on FDI flow data in USD (and not millions of USD) magnifies the multimodality issue. Here we see that there are actually three modes: two for the negative and positive flows just as with the log transformation above and one mode at zero, because the IHS admits zero values. 
+
+```{r}
+fdi_data <- fdi_data %>%
+  mutate(fdi_ihs = asinh(FDI_AM*1e6))
+
+ggplot(fdi_data, aes(x = fdi_ihs)) +
+  geom_histogram(bins = 150)
+```
+
+## Treating missing values as zero flows
+
+The number of *truly* zero bilateral FDI flows in the data set is surprisingly low (``r filter(fdi_data, FDI_AM == 0) %>% nrow()`` observations). The majority of data on bilateral FDI flows is missing (``r filter(fdi_data, is.na(FDI_AM)) %>% nrow()`` observations). Usually this data is missing because it is too small to be reported, i.e. it is the FDI flow between the two countries is essentially zero. Therefore, missing data is often treated as effectively zero FDI flow. Using the IHS transformation on FDI flows in USD (and not in millions of USD) and setting missing values as zero, the above plot becomes:
+
+```{r}
+fdi_data <- fdi_data %>%
+  mutate(FDI_AM = if_else(is.na(FDI_AM), 0, FDI_AM),
+         fdi_ihs = asinh(FDI_AM*1e6))
+
+ggplot(fdi_data, aes(x = fdi_ihs)) +
+  geom_histogram(bins = 150)
+```
+
+It is probably save to assume that most of the missing values in bilateral FDI flows are essentially zero, with absolute FDI flows somewhere below USD 10,000. Since the number of truly zero values in the data is extremely low in comparison to the number of missing values it is reasonable to treat these observations alike. However, this disguises true missing data as zero flows and severely increases the multimodality problem. These issues make a strong case for modeling zero/missing flows separately from positive/negative flows.
+
+## Outliers
+
+The various data transformations show that almost no flows below the absolute magnitude of USD 10,000 are ever reported. The following observations all fall below this threshold (excluding true zero observations). First one needs to check, if these observations are fine (some of these observations imply flows that are way below one cent). When modeling positive/negative flows separately might be reasonable to set these observations to zero.
+
+```{r paged.print=FALSE}
+fdi_data <- fdi_data %>% 
+  mutate(outlier = if_else(!(flow_category %in% c("missing", "zero")) & between(FDI_AM, -0.01, 0.01), 
+                           "yes", "no"))
+fdi_data %>% filter(outlier == "yes") %>% 
+  arrange(FDI_AM) %>%
+  print(n = Inf)
+```
+
+## Conclusion
+
+Some transformation of the FDI flow data is needed. Log transformation and IHS transformation both work fine, especially in the case when the original values are very large, i.e. when FDI is measured in USD and not millions of USD. In this scenario both transformations are almost equivalent and lead to an approximate normal distribution. The visual analysis conducted here shows, that two problems remain: Multimodality and measurement error.
+
+Most of the measurement error most likely stems from the fact that official FDI flow statistics (in million USD) are rounded to the nearest integer value. This is problematic, because the reported data for FDI flows of low magnitude is less variable then the actual (unobserved or unreported) values. The problem might not be as severe if FDI flows are taken as dependent variable and not as independent. **[needs to be checked; problem: independent variables that correlate more strongly with low FDI flows?]**
+
+**[Multimodality (correlated random effects)]**
+
+# Cross-section data
+
+## By host country
+
+tba
+
+## By source country
+
+tba
+
+# Time-series data
+
+tba
+
+# TSCS data
+
+tba
+
+

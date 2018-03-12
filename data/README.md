@@ -1,4 +1,4 @@
-fdi\_minimum\_data
+FDI data
 ================
 
 This is a minimum panel data set for bilateral FDI flows. It contains four variables:

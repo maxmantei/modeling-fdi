@@ -1,5 +1,5 @@
 ---
-title: "fdi_minimum_data"
+title: "FDI data"
 output: github_document
 ---
 
