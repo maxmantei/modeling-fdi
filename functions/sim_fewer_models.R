@@ -16,22 +16,27 @@ for(i in 1:iterations){
   cat(" log-normal")
   out <- bind_rows(out,
                    glm(FDI_AM ~ x + host + source + factor(year), data = dt, family = gaussian(link = "log")) %>% 
-                     tidy() %>% filter(term == "x") %>% mutate(iter = i, model = "log-normal"))
+                   tidy() %>% filter(term == "x") %>% mutate(iter = i, model = "log-normal"))
   
   cat(" | log-gamma")
   out <- bind_rows(out,
                    glm(FDI_AM ~ x + host + source + factor(year), data = dt, family = Gamma(link = "log")) %>%
-                     tidy() %>% filter(term == "x") %>% mutate(iter = i, model = "log-gamma"))
+                   tidy() %>% filter(term == "x") %>% mutate(iter = i, model = "log-gamma"))
   
   cat(" | log-negative-binomial")
   out <- bind_rows(out,
                    MASS::glm.nb(FDI_AM ~ x + host + source + factor(year), data = dt) %>% 
-                     tidy() %>% filter(term == "x") %>% mutate(iter = i, model = "log-negative-binomial"))
+                   tidy() %>% filter(term == "x") %>% mutate(iter = i, model = "log-negative-binomial"))
   
   cat(" | log-quasi-mu")
   out <- bind_rows(out,
                    glm(FDI_AM ~ x + host + source + factor(year), data = dt, family = quasi(link = "log", variance = "mu")) %>%
-                     tidy() %>% filter(term == "x") %>% mutate(iter = i, model = "log-quasi-mu"))
+                   tidy() %>% filter(term == "x") %>% mutate(iter = i, model = "log-quasi-mu"))
+  
+  cat(" lognormal")
+  out <- bind_rows(out,
+                   lm(log(FDI_AM) ~ x + host + source + factor(year), data = dt) %>% 
+                     tidy() %>% filter(term == "x") %>% mutate(iter = i, model = "lognormal"))
   
   cat("\niteration:", i, "of", iterations,"complete.\n")
 }; rm(i)

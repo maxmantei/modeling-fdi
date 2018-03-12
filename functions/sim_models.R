@@ -53,6 +53,11 @@ out <- bind_rows(out,
   glm(FDI_AM ~ x + host + source + factor(year), data = dt, family = quasi(link = "log", variance = "mu^2")) %>%
     tidy() %>% filter(term == "x") %>% mutate(iter = i, model = "log-quasi-mu^2"))
 
+cat(" lognormal")
+out <- bind_rows(out,
+  lm(log(FDI_AM) ~ x + host + source + factor(year), data = dt) %>% 
+    tidy() %>% filter(term == "x") %>% mutate(iter = i, model = "lognormal"))
+
 cat("\niteration:", i, "of", iterations,"complete.\n")
 }; rm(i)
 
