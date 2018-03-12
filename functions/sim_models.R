@@ -1,4 +1,7 @@
-fdi_data <- readRDS("data/fdi_minimum_data.rds")
+library(tidyverse)
+library(broom)
+
+fdi_data <- read_rds("data/fdi_minimum_data.rds")
 
 iterations <- 99
 out <- NULL
