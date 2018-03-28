@@ -10,16 +10,19 @@ fdi_data <- readRDS("data/fdi_minimum_data.rds")
 fdi_data_subset <- fdi_data %>% 
   filter(FDI_AM > 0.01)
 
+# including intercept!
+num_covariates <- 1
+
 ################################################################################
 #------------------- HOST, SOURCE, YEAR ----------------------------------------
 
 fdi_data_subset_fe <- fdi_data_subset %>%
   group_by(host) %>% 
   mutate(n_host = n(), 
-         fe_host = if_else(n_host < 2, "_restriction", host)) %>%
+         fe_host = if_else(n_host < num_covariates + 1, "_restriction", host)) %>%
   group_by(source) %>% 
   mutate(n_source = n(), 
-         fe_source = if_else(n_source < 2, "_restriction", source)) %>% 
+         fe_source = if_else(n_source < num_covariates + 1, "_restriction", source)) %>% 
   group_by(year) %>% 
   mutate(n_year = n()) %>% 
   ungroup() %>% 
@@ -64,21 +67,39 @@ resid <- results_extended %>%
          resid_pearson = resid/sqrt((estimate/results$estimate[results$parameter == "phi"])))
 
 resid %>% ggplot(aes(x = FDI_AM, y = estimate)) + 
-  geom_point(alpha = 0.1) + 
-  geom_abline(intercept = 0, slope = 1) +
-  geom_smooth()
+  geom_point(alpha = 0.8, color = "azure3") + 
+  geom_abline(intercept = 0, slope = 1, color = "cornflowerblue", size = 1) +
+  geom_smooth(color = "coral4") + 
+  coord_cartesian(xlim = c(0, max(resid$FDI_AM)), ylim = c(0, max(resid$FDI_AM))) +
+  xlab(expression(FDI)) +
+  ylab(expression(hat(mu))) +
+  theme_minimal() +
+  theme(axis.title.y = element_text(angle = 0, vjust = 0.5))
 resid %>% ggplot(aes(x = log(FDI_AM), y = log(estimate))) + 
-  geom_point(alpha = 0.1) + 
-  geom_abline(intercept = 0, slope = 1) +
-  geom_smooth()
+  geom_point(alpha = 0.8, color = "azure3") + 
+  geom_abline(intercept = 0, slope = 1, color = "cornflowerblue", size = 1) +
+  geom_smooth(color = "coral4") +
+  coord_cartesian(xlim = c(-5, 15), ylim = c(-5, 15)) +
+  xlab(expression(log(FDI))) +
+  ylab(expression(log(hat(mu)))) +
+  theme_minimal() +
+  theme(axis.title.y = element_text(angle = 0, vjust = 0.5))
 
 resid %>% ggplot(aes(x = log(estimate), y = resid_pearson)) +
-  geom_point(alpha = 0.1) +
-  geom_smooth()
-resid %>% ggplot(aes(x = log(estimate), y = sqrt(resid_pearson^2))) +
-  geom_point(alpha = 0.1) +
-  geom_smooth()
-
+  geom_point(alpha = 0.8, color = "azure3") +
+  geom_smooth(color = "coral4") +
+  coord_cartesian(ylim = c(-50, 50)) +
+  xlab(expression(log(hat(mu)))) +
+  ylab(expression(hat(epsilon)/hat(theta)*hat(mu))) +
+  theme_minimal() +
+  theme(axis.title.y = element_text(angle = 0, vjust = 0.5))
+resid %>% ggplot(aes(x = log(estimate), y = sqrt(abs(resid_pearson)))) +
+  geom_point(alpha = 0.8, color = "azure3") +
+  geom_smooth(color = "coral4") +
+  xlab(expression(log(hat(mu)))) +
+  ylab(expression(sqrt(abs(hat(epsilon)/hat(theta)*hat(mu))))) +
+  theme_minimal() +
+  theme(axis.title.y = element_text(angle = 0, vjust = 0.5))
 
 #------------------- HOSTYEAR, SOURCEYEAR, DYAD --------------------------------
 
@@ -87,10 +108,10 @@ fdi_data_subset_fe <- fdi_data_subset %>%
          sourceyear = paste(source, year, sep = "_")) %>%
   group_by(hostyear) %>% 
   mutate(n_hostyear = n(), 
-         fe_hostyear = if_else(n_hostyear < 2, "_restriction", hostyear)) %>%
+         fe_hostyear = if_else(n_hostyear < num_covariates + 1, "_restriction", hostyear)) %>%
   group_by(sourceyear) %>% 
   mutate(n_sourceyear = n(), 
-         fe_sourceyear = if_else(n_sourceyear < 2, "_restriction", sourceyear)) %>% 
+         fe_sourceyear = if_else(n_sourceyear < num_covariates + 1, "_restriction", sourceyear)) %>% 
   group_by(dyad) %>% 
   mutate(n_dyad = n(), 
          fe_dyad = if_else(n_dyad < 2, "_restriction", dyad)) %>% 
@@ -136,17 +157,36 @@ resid <- results_extended %>%
          resid_pearson = resid/sqrt((estimate/results$estimate[results$parameter == "phi"])))
 
 resid %>% ggplot(aes(x = FDI_AM, y = estimate)) + 
-    geom_point(alpha = 0.1) + 
-    geom_abline(intercept = 0, slope = 1) +
-    geom_smooth()
+  geom_point(alpha = 0.8, color = "azure3") + 
+  geom_abline(intercept = 0, slope = 1, color = "cornflowerblue", size = 1) +
+  geom_smooth(color = "coral4") + 
+  coord_cartesian(xlim = c(0, max(resid$FDI_AM)), ylim = c(0, max(resid$FDI_AM))) +
+  xlab(expression(FDI)) +
+  ylab(expression(hat(mu))) +
+  theme_minimal() +
+  theme(axis.title.y = element_text(angle = 0, vjust = 0.5))
 resid %>% ggplot(aes(x = log(FDI_AM), y = log(estimate))) + 
-  geom_point(alpha = 0.1) + 
-  geom_abline(intercept = 0, slope = 1) +
-  geom_smooth()
+  geom_point(alpha = 0.8, color = "azure3") + 
+  geom_abline(intercept = 0, slope = 1, color = "cornflowerblue", size = 1) +
+  geom_smooth(color = "coral4") +
+  coord_cartesian(xlim = c(-5, 15), ylim = c(-5, 15)) +
+  xlab(expression(log(FDI))) +
+  ylab(expression(log(hat(mu)))) +
+  theme_minimal() +
+  theme(axis.title.y = element_text(angle = 0, vjust = 0.5))
 
 resid %>% ggplot(aes(x = log(estimate), y = resid_pearson)) +
-  geom_point(alpha = 0.1) +
-  geom_smooth()
-resid %>% ggplot(aes(x = log(estimate), y = sqrt(resid_pearson^2))) +
-  geom_point(alpha = 0.1) +
-  geom_smooth()
+  geom_point(alpha = 0.8, color = "azure3") +
+  geom_smooth(color = "coral4") +
+  coord_cartesian(ylim = c(-50, 50)) +
+  xlab(expression(log(hat(mu)))) +
+  ylab(expression(hat(epsilon)/hat(theta)*hat(mu))) +
+  theme_minimal() +
+  theme(axis.title.y = element_text(angle = 0, vjust = 0.5))
+resid %>% ggplot(aes(x = log(estimate), y = sqrt(abs(resid_pearson)))) +
+  geom_point(alpha = 0.8, color = "azure3") +
+  geom_smooth(color = "coral4") +
+  xlab(expression(log(hat(mu)))) +
+  ylab(expression(sqrt(abs(hat(epsilon)/hat(theta)*hat(mu))))) +
+  theme_minimal() +
+  theme(axis.title.y = element_text(angle = 0, vjust = 0.5))
