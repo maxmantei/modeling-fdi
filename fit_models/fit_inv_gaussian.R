@@ -64,18 +64,18 @@ resid <- results_extended %>%
   mutate(obs = as.integer(str_extract(parameter, "\\d{1,5}"))) %>% arrange(obs) %>% 
   bind_cols(fdi_data_subset_fe) %>%
   mutate(resid = FDI_AM - estimate,
-         resid_pearson = resid/sqrt((estimate^3)/results$estimate[results$parameter == "phi"]))
+         resid_pearson = resid/sqrt((estimate^3)/exp(results$estimate[results$parameter == "log_phi"])))
 
-resid %>% ggplot(aes(x = FDI_AM, y = estimate)) + 
+resid %>% ggplot(aes(x = FDI_AM/1e3, y = estimate)) + 
   geom_point(alpha = 0.8, color = "azure3") + 
   geom_abline(intercept = 0, slope = 1, color = "cornflowerblue", size = 1) +
   geom_smooth(color = "coral4") + 
-  coord_cartesian(xlim = c(0, max(resid$FDI_AM)), ylim = c(0, max(resid$FDI_AM))) +
+  coord_cartesian(xlim = c(0, max(resid$FDI_AM/1e3)), ylim = c(0, max(resid$FDI_AM/1e3))) +
   xlab(expression(FDI)) +
   ylab(expression(hat(mu))) +
   theme_minimal() +
   theme(axis.title.y = element_text(angle = 0, vjust = 0.5))
-resid %>% ggplot(aes(x = log(FDI_AM), y = log(estimate))) + 
+resid %>% ggplot(aes(x = log(FDI_AM/1e3), y = log(estimate))) + 
   geom_point(alpha = 0.8, color = "azure3") + 
   geom_abline(intercept = 0, slope = 1, color = "cornflowerblue", size = 1) +
   geom_smooth(color = "coral4") +
@@ -154,13 +154,13 @@ resid <- results_extended %>%
   mutate(obs = as.integer(str_extract(parameter, "\\d{1,5}"))) %>% arrange(obs) %>% 
   bind_cols(fdi_data_subset_fe) %>%
   mutate(resid = FDI_AM - estimate,
-         resid_pearson = resid/sqrt((estimate^3)/results$estimate[results$parameter == "phi"]))
+         resid_pearson = resid/sqrt((estimate^3)/results$estimate[results$parameter == "log_phi"]))
 
 resid %>% ggplot(aes(x = FDI_AM, y = estimate)) + 
   geom_point(alpha = 0.8, color = "azure3") + 
   geom_abline(intercept = 0, slope = 1, color = "cornflowerblue", size = 1) +
   geom_smooth(color = "coral4") + 
-  coord_cartesian(xlim = c(0, max(resid$FDI_AM)), ylim = c(0, max(resid$FDI_AM))) +
+  coord_cartesian(xlim = c(0, max(resid$FDI_AM/1e3)), ylim = c(0, max(resid$FDI_AM/1e3))) +
   xlab(expression(FDI)) +
   ylab(expression(hat(mu))) +
   theme_minimal() +

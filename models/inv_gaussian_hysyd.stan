@@ -19,7 +19,7 @@ transformed data{
   vector[N] FDI_AM_transformed = FDI_AM ./ 1000;
 }
 parameters{
-  real<lower=0> phi;
+  real log_phi;
   
   real alpha;
   vector[N_hostyear-2] alpha_hostyear;
@@ -44,7 +44,7 @@ transformed parameters{
 model{
   
   if(priors){
-    phi ~ double_exponential(0, 1);
+    log_phi ~ normal(-20, 5);
     
     alpha ~ normal(0, 10);
     
@@ -53,7 +53,7 @@ model{
     alpha_dyad ~ normal(0, 5);
   } 
   
-  target += inv_gaussian_lpdf(FDI_AM_transformed | mu, phi);
+  target += inv_gaussian_lpdf(FDI_AM_transformed | mu, exp(log_phi));
   
 }
 generated quantities{
